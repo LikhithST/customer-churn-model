@@ -41,6 +41,7 @@ jobs:
 
       - name: Train model
         run: |
+          mkdir -p models
           python train.py
 
       - name: Upload model to S3
