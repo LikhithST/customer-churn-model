@@ -46,12 +46,12 @@ jobs:
 
       - name: Upload model to S3
         run: |
-          aws s3 cp models/churn_model.pkl s3://${{ env.S3_BUCKET }}/models/churn_model.pkl
+          aws s3 cp models/churn_model.pkl s3://${{ env.S3_BUCKET }}/models/churn_model_v_${{ github.run_id }}.pkl
           echo "Model uploaded to S3 bucket: ${{ env.S3_BUCKET }}"
 
       - name: Edit InferenceService YAML
         run: |
-          MODEL_URI="s3://${{ env.S3_BUCKET }}/models/churn_model.pkl"
+          MODEL_URI="s3://${{ env.S3_BUCKET }}/models/churn_model_v_${{ github.run_id }}.pkl"
           sed -i "s|storageUri: .*|storageUri: ${MODEL_URI}|g" k8s/inference.yaml
 
       - name: Commit changes to inference.yaml
