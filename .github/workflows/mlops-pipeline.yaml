@@ -6,7 +6,7 @@ on:
 env:
   AWS_REGION: eu-north-1
   S3_BUCKET: churn-model-data-9109
-  
+
 jobs:
   train-and-deploy:
     runs-on: ubuntu-latest
