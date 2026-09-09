@@ -25,47 +25,47 @@ The system follows a modern MLOps GitOps workflow:
 
 ```mermaid
 flowchart TD
-    subgraph Development & Data Versioning
-        DEV[Developer / Data Scientist]
-        DVC[DVC Tracked Data: churn_data.csv]
-        S3[(AWS S3: churn-model-data-9109)]
+    subgraph DEV_DATA ["Development & Data Versioning"]
+        DEV["Developer / Data Scientist"]
+        DVC["DVC Tracked Data: churn_data.csv"]
+        S3[("AWS S3: churn-model-data-9109")]
         DEV -->|dvc add / dvc push| S3
-        DEV -->|git commit & push| GITHUB[GitHub Repository]
+        DEV -->|"git commit & push"| GITHUB["GitHub Repository"]
     end
 
-    subgraph CI Pipeline [GitHub Actions]
-        GITHUB -->|Trigger on push main| GHA[GitHub Actions Runner]
+    subgraph CI_PIPELINE ["CI Pipeline (GitHub Actions)"]
+        GITHUB -->|Trigger on push main| GHA["GitHub Actions Runner"]
         GHA -->|dvc pull| S3
-        GHA -->|train.py| MODEL[Trained Model: churn_model.pkl]
+        GHA -->|train.py| MODEL["Trained Model: churn_model.pkl"]
         MODEL -->|aws s3 cp| S3
-        GHA -->|Update storageUri & commit| GITHUB
+        GHA -->|"Update storageUri & commit"| GITHUB
     end
 
-    subgraph CD & GitOps [ArgoCD]
-        GITHUB -->|Watch k8s/ manifests| ARGOCD[ArgoCD Controller]
-        ARGOCD -->|Reconcile & Apply| K8S[Kubernetes Cluster]
+    subgraph CD_GITOPS ["CD & GitOps (ArgoCD)"]
+        GITHUB -->|"Watch k8s/ manifests"| ARGOCD["ArgoCD Controller"]
+        ARGOCD -->|"Reconcile & Apply"| K8S["Kubernetes Cluster"]
     end
 
-    subgraph Kubernetes Cluster [KinD]
-        subgraph NS_CERT[Namespace: cert-manager]
-            CM[cert-manager controller & webhook]
+    subgraph K8S_CLUSTER ["Kubernetes Cluster (KinD)"]
+        subgraph NS_CERT ["Namespace: cert-manager"]
+            CM["cert-manager controller & webhook"]
         end
 
-        subgraph NS_KSERVE[Namespace: kserve]
-            KSC[KServe Controller Manager]
-            CSR[ClusterServingRuntime: kserve-sklearnserver]
+        subgraph NS_KSERVE ["Namespace: kserve"]
+            KSC["KServe Controller Manager"]
+            CSR["ClusterServingRuntime: kserve-sklearnserver"]
         end
 
-        subgraph NS_APP[Namespace: churn-model]
-            SA[ServiceAccount: sa-s3-access]
-            SEC[Secret: s3-secret]
-            ISVC[InferenceService: churn-predictor]
+        subgraph NS_APP ["Namespace: churn-model"]
+            SA["ServiceAccount: sa-s3-access"]
+            SEC["Secret: s3-secret"]
+            ISVC["InferenceService: churn-predictor"]
             
-            subgraph POD[Predictor Pod]
-                INIT[storage-initializer (Init Container)]
-                SERV[kserve-container (Serving Container)]
+            subgraph POD ["Predictor Pod"]
+                INIT["storage-initializer (Init Container)"]
+                SERV["kserve-container (Serving Container)"]
                 INIT -->|1. Pull model from S3| S3
-                INIT -->|2. Mount to /mnt/models| VOL[(emptyDir Volume)]
+                INIT -->|"2. Mount to /mnt/models"| VOL[("emptyDir Volume")]
                 VOL -->|3. Load model into memory| SERV
             end
         end
@@ -498,17 +498,17 @@ Every KServe Predictor pod contains **two distinct containers**:
 sequenceDiagram
     autonumber
     participant K8s as Kubelet
-    participant Init as storage-initializer (Init Container)
-    participant S3 as AWS S3 Bucket
-    participant Vol as emptyDir Volume (/mnt/models)
-    participant Serv as kserve-container (Serving Container)
+    participant Init as "storage-initializer (Init Container)"
+    participant S3 as "AWS S3 Bucket"
+    participant Vol as "emptyDir Volume (/mnt/models)"
+    participant Serv as "kserve-container (Serving Container)"
 
     K8s->>Init: Start Init Container
-    Note over Init: Evaluates storageUri & sa-s3-access Secret
+    Note over Init: Evaluates storageUri and sa-s3-access Secret
     Init->>S3: Authenticate & Download churn_model.pkl
     alt S3 Download Fails (Auth/Network/Path)
         Init-->>K8s: Exit Code 1 (Init:Error)
-        Note over Serv: Container blocked in "PodInitializing"
+        Note over Serv: Container blocked in 'PodInitializing'
     else S3 Download Succeeds
         Init->>Vol: Write model file to /mnt/models
         Init-->>K8s: Exit Code 0 (Completed)
