@@ -9,3 +9,4 @@ wheels/
 .venv
 .env
 models/*
+k8s/serviceaccount.yaml
